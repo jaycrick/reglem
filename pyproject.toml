@@ -1,0 +1,85 @@
+[project]
+name = "reglem"
+version = "0.1.0"
+description = "Build anchored regex alternations over word lemmas, with optional per-language spelling variants."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "jaycrick", email = "114450568+jaycrick@users.noreply.github.com" }]
+requires-python = ">=3.10"
+keywords = ["regex", "lemma", "anki", "greek", "linguistics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
+dependencies = ["pydantic>=2.7"]
+
+[project.urls]
+Homepage = "https://github.com/jaycrick/reglem"
+Issues = "https://github.com/jaycrick/reglem/issues"
+Changelog = "https://github.com/jaycrick/reglem/blob/main/CHANGELOG.md"
+
+[project.scripts]
+reglem = "reglem.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "ruff>=0.15",
+    "basedpyright>=1.18",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reglem"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203", # one-blank-line-before-class -- conflicts with D211
+    "D213", # multi-line-summary-second-line -- conflicts with D212
+    "COM812", # trailing comma -- formatter handles this
+    "CPY001", # copyright header -- not used in this project
+    "RUF001", # ambiguous-unicode-character-string -- constant false positive on Greek text
+    "RUF002", # same, in docstrings
+    "RUF003", # same, in comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "D", "INP001", "FBT001"]
+"src/reglem/cli.py" = ["T201"] # CLI output is meant to print to stdout
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.basedpyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.10"
+reportMissingTypeStubs = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config --cov=reglem --cov-report=term-missing --cov-fail-under=95"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/reglem"]
