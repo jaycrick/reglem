@@ -64,3 +64,56 @@ than the false-positive cost justifies.
 27 entries:
 9 each for α, ι, υ
 (bare, acute, grave, smooth, rough, smooth+acute, rough+acute, smooth+grave, rough+grave).
+
+## Greek article: no space allowed
+
+### Problem
+
+A lemma pattern normally allows a plain space right after a matched lemma —
+that's how `καί and, also` matches the lemma `καί`.
+The Greek definite article breaks that assumption.
+It's never immediately followed by running Greek text in its own dictionary entry;
+it's cited on its own, joined to its other forms by punctuation:
+`ὁ, ἡ, τό  the` or `ὁ/ἡ/τό`.
+In running text, though, it's immediately followed by the word it modifies:
+`ὁ σοφός, -ή, -όν` (the wise man), `ἡ ἀρίστη` (the best woman).
+
+Without an exception,
+the lemma `ὁ` matches the start of every one of those unrelated entries too —
+a large, silent source of false positives for a single-letter lemma.
+
+### Fix
+
+`reglem` denies a plain space, and a non-breaking space (U+00A0),
+right after any of the 19 forms of the Greek definite article.
+Comma, period, slash, and end-of-field are still allowed.
+That's implemented as `Language.excluded_terminators`,
+a per-lemma map of terminator characters to exclude —
+see `build.py`'s module docstring for how the pattern splits into per-terminator
+branches when this map applies.
+
+NBSP is excluded for the same reason it's a default terminator at all:
+it renders as an invisible space in the Anki editor
+while still separating words in field HTML.
+
+### The 19 forms
+
+```
+ὁ    ἡ    τό
+τοῦ  τῆς  τῷ   τῇ   τόν  τήν
+τώ   τοῖν
+οἱ   αἱ   τά   τῶν  τοῖς ταῖς τούς τάς
+```
+
+Masculine, feminine, neuter; nominative, genitive, dative, accusative;
+singular, dual, plural.
+
+### Grave-accented forms excluded on purpose
+
+Running text writes the article with a grave accent before another word —
+`τὸν`, `τὴν`, `τοὺς`, `τὰς` —
+where the citation form carries an acute (`τόν`, `τήν`, `τούς`, `τάς`).
+A lemma list cites the acute form,
+so there's nothing to exclude a terminator from for the grave spellings —
+they're not in `ARTICLE_FORMS`.
+Adding them would be a one-line extension if a source ever needs it.

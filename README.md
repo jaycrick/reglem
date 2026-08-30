@@ -61,7 +61,7 @@ reglem --list-languages
 | `-f/--field NAME` | `Greek` | Anki field name in output search string |
 | `--macrons` | off | expand ambiguous-length vowels into macron alternatives |
 | `--strip-trailing-digits` | off | strip trailing homograph digit (`lead2` → `lead`) before matching |
-| `--terminators CHARS` | `" ,. "` (space, comma, period, NBSP) | chars allowed right after a matched lemma |
+| `--terminators CHARS` | `" ,. /"` (space, comma, period, NBSP, slash) | chars allowed right after a matched lemma |
 | `--raw` | off | print bare regex, skip the `"field:re:..."` wrapper |
 | `--language NAME` | `greek` | which variant tables to use for `--macrons` |
 | `--list-languages` | — | print known language names, exit |
@@ -75,12 +75,36 @@ it's invalid syntax in Anki,
 and without `^` it'd match `word` inside `password` too.
 reglem builds `^(alt1|alt2|...)([terminators]|$)` instead —
 one alternation, explicit anchor, ordinary terminator class.
+When a language excludes a terminator for a specific lemma (see Greek article,
+below), that lemma gets its own terminator group in a separate branch instead —
+still no lookahead.
 
 ## Greek macrons
 
 See `docs/greek.md` for the full story —
 why unmarked Greek text is vowel-length-ambiguous,
 and how the macron expansion table is built.
+
+## Greek article
+
+A plain space isn't allowed right after any of the 19 forms of the Greek
+definite article (`ὁ`, `ἡ`, `τό`, `τῶν`, `τούς`, ...): unlike an ordinary
+headword, the article is never immediately followed by running Greek text in
+its own dictionary entry — it's cited with punctuation instead, `ὁ, ἡ, τό` or
+`ὁ/ἡ/τό`. Without the exception, `ὁ` as a lemma would match the start of
+every entry that *begins* with the article, like `ὁ σοφός, -ή, -όν  wise` or
+`ἡ ἀρίστη`, which are entries for other words entirely.
+
+```python
+build_pattern(["ὁ"])
+# matches:      "ὁ, ἡ, τό  the"   "ὁ/ἡ/τό"   "ὁ" (end of field)
+# doesn't match: "ὁ σοφός, -ή, -όν  wise"   "ἡ ἀρίστη"
+```
+
+This is why `/` is in `DEFAULT_TERMINATORS`: it's how a slash-separated
+article citation (`ὁ/ἡ/τό`) still matches. See `docs/greek.md` for the full
+list of forms and why grave-accented running-text forms (`τὸν`, `τὰς`, ...)
+are intentionally excluded.
 
 ## Development
 

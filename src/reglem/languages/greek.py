@@ -35,10 +35,35 @@ be written. This only makes a generated pattern larger (extra alternation
 branches that can never match anything real), not incorrect -- reliably
 detecting diphthongs is much more machinery than the false-positive cost
 justifies here.
+
+Separately, `ARTICLE_FORMS` lists the 19 forms of the Greek definite article.
+A lemma pattern normally allows a plain space right after a matched lemma
+(see `DEFAULT_TERMINATORS` in `options.py`), but the article is special: it
+is never the last thing before running Greek text in a dictionary/word-list
+entry the way an ordinary headword is. Instead it's cited on its own, joined
+to its other forms by punctuation -- `ὁ, ἡ, τό` or `ὁ/ἡ/τό` -- while in
+running text it is immediately followed by the word it modifies (`ὁ σοφός`,
+`ἡ ἀρίστη`). Without an exception, an article lemma matches the start of
+every one of those unrelated entries. So `GREEK.excluded_terminators` denies
+a plain space, and a non-breaking space (U+00A0), right after any article
+form -- comma, period, slash, and end-of-field are still allowed.
+
+NBSP is excluded for the same reason it's a default terminator at all
+(`options.py`'s `DEFAULT_TERMINATORS` docstring): it renders as an invisible
+space in the Anki editor while still separating words in field HTML, so it
+needs the same treatment as a literal space here.
+
+Grave-accented forms (τὸν, τὴν, τοὺς, τὰς -- the article as it actually
+appears in running text, where an acute shifts to a grave before another
+word) are deliberately not in `ARTICLE_FORMS`: a lemma list cites the acute
+citation form, not the running-text accentuation, so there is nothing to
+exclude a terminator from for those spellings. Adding them would be a
+one-line extension if a source ever needs it.
 """
 
 from __future__ import annotations
 
+import unicodedata
 from typing import TYPE_CHECKING
 
 from reglem.languages._base import Language
@@ -88,4 +113,32 @@ assert len(MACRON_MAP) == _EXPECTED_MACRON_MAP_SIZE, (  # noqa: S101
     f"expected {_EXPECTED_MACRON_MAP_SIZE} entries, got {len(MACRON_MAP)}"
 )
 
-GREEK = Language(name="greek", variant_tables={"macrons": MACRON_MAP})
+# fmt: off
+ARTICLE_FORMS: tuple[str, ...] = tuple(
+    unicodedata.normalize("NFC", form)
+    for form in (
+        "ὁ", "ἡ", "τό",
+        "τοῦ", "τῆς", "τῷ", "τῇ", "τόν", "τήν",
+        "τώ", "τοῖν",
+        "οἱ", "αἱ", "τά", "τῶν", "τοῖς", "ταῖς", "τούς", "τάς",
+    )
+)
+# fmt: on
+"""The 19 forms of the Greek definite article (masc./fem./neut., all cases,
+all numbers), NFC-normalized to match how `prepare_lemmas` compares lemmas.
+See the module docstring for why these specifically need a terminator
+exception.
+"""
+
+_EXPECTED_ARTICLE_FORM_COUNT = 19
+assert len(ARTICLE_FORMS) == _EXPECTED_ARTICLE_FORM_COUNT, (  # noqa: S101
+    f"expected {_EXPECTED_ARTICLE_FORM_COUNT} article forms, got {len(ARTICLE_FORMS)}"
+)
+
+_SPACE_TERMINATORS = " \xa0"  # plain space, non-breaking space
+
+GREEK = Language(
+    name="greek",
+    variant_tables={"macrons": MACRON_MAP},
+    excluded_terminators=dict.fromkeys(ARTICLE_FORMS, _SPACE_TERMINATORS),
+)

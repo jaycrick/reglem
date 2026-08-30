@@ -35,8 +35,12 @@ def test_pattern_is_anchored_and_has_no_lookaround(pattern: re.Pattern[str]) -> 
         ("  ὁ leading space", False),  # anchored to start
         ("ἀγαθός good", True),
         ("Ξενοφῶν Xenophon", False),
-        ("ὁ\xa0the", True),  # non-breaking space terminator
+        ("καί\xa0and", True),  # non-breaking space terminator, non-article lemma
         ("ἀγαθόν good (wrong ending)", False),
+        ("ὁ\xa0the", False),  # article + NBSP now excluded, not just plain space
+        ("ὁ σοφός, -ή, -όν  wise", False),  # article followed by a space: different entry
+        ("ἡ ἀρίστη", False),  # same, feminine article
+        ("ὁ/ἡ/τό  the", True),  # slash-separated article citation
     ],
 )
 def test_match_behaviour(pattern: re.Pattern[str], field_text: str, expected: bool) -> None:
@@ -44,8 +48,11 @@ def test_match_behaviour(pattern: re.Pattern[str], field_text: str, expected: bo
 
 
 def test_macrons_disabled_by_default() -> None:
+    # LEMMAS contains the article "ὁ", so `(?:` shows up regardless of macron
+    # state (it's the terminator-exception branch grouping, see build.py) --
+    # check for the absence of macron variants directly instead.
     raw = build_pattern(LEMMAS)
-    assert "(?:" not in raw
+    assert "ᾱ" not in raw
     pattern = re.compile(raw)
     assert pattern.search("ἀγαθός good")
     assert not pattern.search("ᾱ̓γαθός good")
@@ -84,3 +91,51 @@ def test_custom_terminators() -> None:
     pattern = re.compile(raw)
     assert pattern.search("cat;dog")
     assert not pattern.search("cat,dog")
+
+
+@pytest.mark.parametrize(
+    ("field_text", "expected"),
+    [
+        ("τῶν σοφῶν wise (gen. pl.)", False),  # article + space: different entry
+        ("τῶν, τοῖς the (gen./dat. pl.)", True),  # article's own citation entry
+        ("τούς", True),  # end-of-field
+        ("τούς the (acc. pl. masc.)", False),  # article + space: different entry
+    ],
+)
+def test_article_exception_covers_full_paradigm(field_text: str, expected: bool) -> None:
+    raw = build_pattern(["τῶν", "τούς"])
+    pattern = re.compile(raw)
+    assert bool(pattern.search(field_text)) == expected
+
+
+def test_slash_terminator_is_global_not_article_only() -> None:
+    raw = build_pattern(["ἀγαθός"])
+    pattern = re.compile(raw)
+    assert pattern.search("ἀγαθός/ή/όν  good")
+
+
+def test_article_exception_survives_macron_expansion() -> None:
+    raw = build_pattern(["τά"], SearchOptions(with_macrons=True))
+    pattern = re.compile(raw)
+    assert pattern.search("τά, the (nom./acc. pl. neut.)")
+    assert not pattern.search("τά σοφά wise things")
+
+
+def test_article_exception_with_no_excludable_terminators_stays_single_group() -> None:
+    # terminators=",;" contains no space/NBSP to exclude, so the article's
+    # exception has nothing to remove: its effective terminator set is
+    # identical to the plain lemma's, and both collapse into one group.
+    raw = build_pattern(["ὁ", "καί"], SearchOptions(terminators=",;"))
+    assert raw.count("(?:") == 0
+    pattern = re.compile(raw)
+    assert pattern.search("ὁ,the")
+    assert not pattern.search("ὁ the")
+
+
+def test_article_exception_can_exhaust_all_terminators() -> None:
+    # terminators=" " is entirely excluded for the article, leaving nothing
+    # but end-of-string to match against -- the `[]` empty-class edge case.
+    raw = build_pattern(["ὁ"], SearchOptions(terminators=" "))
+    pattern = re.compile(raw)
+    assert pattern.fullmatch("ὁ")
+    assert not pattern.search("ὁ x")

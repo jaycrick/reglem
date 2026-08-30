@@ -7,13 +7,17 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from reglem.errors import UnknownLanguageError
 from reglem.languages import available_languages, get_language
 
-DEFAULT_TERMINATORS = " ,.\xa0"
-"""Space, comma, full stop, non-breaking space (U+00A0).
+DEFAULT_TERMINATORS = " ,.\xa0/"
+"""Space, comma, full stop, non-breaking space (U+00A0), slash.
 
 The non-breaking space matters for Anki fields specifically: it shows up in
 field HTML (e.g. entity-derived) but is invisible in the Anki editor, so
 omitting it here would cause silent, hard-to-diagnose match misses. It's
 harmless to keep as a default for other targets too.
+
+The slash covers dictionary entries that cite alternative spellings inline,
+e.g. a slash-separated Greek article (`ὁ/ἡ/τό`) or adjective principal parts
+(`ἀγαθός/ή/όν`).
 """
 
 DEFAULT_FIELD = "Greek"

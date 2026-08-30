@@ -1,10 +1,12 @@
 """reglem: build anchored regex alternations over word lemmas.
 
 Turns a list of lemmas into one anchored regex alternation
-(`^(lemma1|lemma2|...)([terminators]|$)`), with optional per-language
-spelling-variant expansion (currently: Greek macron/long-vowel forms), and an
-Anki `field:re:...` search-string wrapper. See `docs/greek.md` and the
-README for the motivating detail.
+(`^(lemma1|lemma2|...)([terminators]|$)`, split into one bracketed group per
+terminator set when a language excludes a terminator for specific lemmas --
+see `build.py`), with optional per-language spelling-variant expansion
+(currently: Greek macron/long-vowel forms), and an Anki `field:re:...`
+search-string wrapper. See `docs/greek.md` and the README for the motivating
+detail.
 """
 
 from __future__ import annotations

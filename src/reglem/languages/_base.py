@@ -23,3 +23,12 @@ class Language(BaseModel):
 
     name: str
     variant_tables: dict[str, VariantTable]
+    excluded_terminators: dict[str, str] = {}
+    """Lemma -> terminator characters that may NOT follow that exact lemma.
+
+    Empty by default, so languages without any such exception need not set
+    it. See `greek.py`'s `ARTICLE_FORMS` for the motivating case: a lemma
+    whose normal dictionary citation is never followed by a plain space, so
+    space needs to be excluded from its terminator set specifically rather
+    than for every lemma.
+    """
